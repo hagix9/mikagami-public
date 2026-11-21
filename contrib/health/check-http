@@ -1,0 +1,62 @@
+#!/bin/sh
+# Mikagami health check for an HTTP endpoint (for [health] command).
+#
+#   check-http URL [--status CODE] [--contains TEXT] [--timeout SECONDS]
+#
+# Exit 0 (healthy) only when the request completes within the timeout, the HTTP status is
+# CODE (default 200) and, with --contains, the response body contains TEXT (a fixed string,
+# not a pattern). Anything else exits 1 (unhealthy); a usage error exits 2 (Mikagami counts
+# every non-zero exit as unhealthy). Uses curl; no shell is involved in Mikagami's call.
+#
+# Example ([health] command is an argv array):
+#   command = ["/usr/libexec/mikagami/check-http", "http://127.0.0.1/healthz",
+#              "--status", "200", "--contains", "ok", "--timeout", "2"]
+# To inspect an API response more closely, write your own script in the same shape (exit 0
+# only when healthy) and point [health] command at it.
+set -u
+
+usage() { echo "usage: check-http URL [--status CODE] [--contains TEXT] [--timeout SECONDS]" >&2; exit 2; }
+
+[ $# -ge 1 ] || usage
+url=$1; shift
+case "$url" in http://*|https://*) ;; *) usage ;; esac
+status=200; contains=""; timeout=2
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --status) [ $# -ge 2 ] || usage; status=$2; shift 2 ;;
+    --contains) [ $# -ge 2 ] || usage; contains=$2; shift 2 ;;
+    --timeout) [ $# -ge 2 ] || usage; timeout=$2; shift 2 ;;
+    *) usage ;;
+  esac
+done
+case "$status" in ""|*[!0-9]*) usage ;; esac
+case "$status" in [1-5][0-9][0-9]) ;; *) usage ;; esac
+case "$timeout" in ""|*[!0-9]*) usage ;; esac
+[ "$timeout" -ge 1 ] || usage
+
+curl=/usr/bin/curl
+[ -x "$curl" ] || curl=$(command -v curl) || { echo "check-http: curl not found" >&2; exit 1; }
+
+# The body, then a final line with the status code. -sS: no progress, errors shown.
+# --proto restricts redirects and the URL to HTTP(S); no redirect is followed.
+# -q (first): no ~/.curlrc; no proxy from the environment; the body is bounded (1 MiB).
+out=$("$curl" -q -sS --noproxy '*' --proto '=http,https' --max-filesize 1048576 \
+  --max-time "$timeout" -w '\n%{http_code}' -- "$url") || {
+  echo "check-http: request to $url failed" >&2
+  exit 1
+}
+code=${out##*
+}
+body=${out%
+*}
+if [ "$code" != "$status" ]; then
+  echo "check-http: $url answered $code (expected $status)" >&2
+  exit 1
+fi
+if [ -n "$contains" ]; then
+  case "$body" in
+    *"$contains"*) ;;
+    *) echo "check-http: $url body does not contain the expected text" >&2; exit 1 ;;
+  esac
+fi
+exit 0

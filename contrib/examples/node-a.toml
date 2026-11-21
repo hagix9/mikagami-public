@@ -1,0 +1,51 @@
+# Mikagami node configuration — node A (the preferred node, dials node B).
+# Install as /etc/mikagami/mikagami.toml (mode 0600, owner root).
+#
+# The two nodes use the same cluster id, the same Witness and the same PSK.
+# The node whose id sorts LOWER dials the peer (`peer.address`, no
+# `node.listen`); the node whose id sorts HIGHER listens (`node.listen`, no
+# `peer.address`). Exactly one node sets `node.preferred = true`.
+
+[cluster]
+id = "example-ha"
+
+[node]
+id = "node-a"
+preferred = true
+
+[peer]
+id = "node-b"
+address = "192.168.100.12:7946"
+
+[witness]
+id = "witness-1"
+address = "192.168.100.13:7947"
+
+[vip]
+address = "192.168.100.50/24"
+interface = "eth0"
+
+[service]
+manager = "systemd"
+unit = "nginx.service"
+
+[health]
+command = ["/usr/local/bin/check-nginx"]
+
+[security]
+psk_file = "/etc/mikagami/cluster.psk"
+
+# Automatic failover is on by default and needs a fence command to act on a
+# lost peer (see [fencing]). Without a working fence command a lost peer is
+# never taken over automatically: promotion then needs `mikagami recover`
+# and SIGUSR1. A healthy cold start needs no fence command.
+[failover]
+auto = true
+
+# Required for automatic takeover of a lost peer. The commands are argv
+# lists run as root, never through a shell, and must be idempotent: "make
+# the peer isolated", not "toggle its power".
+# [fencing]
+# backend = "command"
+# fence = ["/usr/local/sbin/fence-peer"]
+# verify = ["/usr/local/sbin/verify-peer-fenced"]

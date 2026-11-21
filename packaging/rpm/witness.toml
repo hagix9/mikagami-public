@@ -1,0 +1,14 @@
+# Mikagami Witness configuration (placeholder installed by the RPM package).
+#
+# Used only on the Witness host of the Witness topology (not by the two-node
+# topology). This file is intentionally NOT a usable configuration: it has no
+# keys, so `mikagami witness init|run|rearm` refuse it (missing field
+# `cluster`).
+#
+# Replace it with the Witness configuration (mode 0600, owner root):
+#   /usr/share/doc/mikagami/examples/witness.toml
+# then run `mikagami witness init` once (docs/deployment.md). The package never
+# creates, modifies or deletes the Witness state directory.
+#
+# The file is %config(noreplace): package upgrades keep your edited file and
+# write a new placeholder as witness.toml.rpmnew.

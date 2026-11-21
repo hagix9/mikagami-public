@@ -1,0 +1,16 @@
+# Mikagami node configuration (placeholder installed by the RPM package).
+#
+# This file is intentionally NOT a usable configuration: it has no keys, so
+# `mikagami daemon run` and `mikagami two-node ...` refuse it (missing field
+# `cluster`) and an unedited install can never start an HA daemon.
+#
+# Replace it with the configuration of this node (mode 0600, owner root):
+#   Witness topology:          /usr/share/doc/mikagami/examples/node-a.toml, node-b.toml
+#   two-node (witness-less):   /usr/share/doc/mikagami/examples/two-node-a.toml, two-node-b.toml,
+#                              two-node-single-segment-a.toml
+# Reference: /usr/share/doc/mikagami/docs/configuration.md, deployment.md and
+# /usr/share/doc/mikagami/README.rpm.md.
+#
+# The file is %config(noreplace): package upgrades keep your edited file and
+# write a new placeholder as mikagami.toml.rpmnew. A file that existed before
+# the package was first installed is kept the same way.

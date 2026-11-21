@@ -1,0 +1,1 @@
+default via 10.146.0.2 dev ens4 proto dhcp src 10.146.0.21 metric 100 

@@ -1,0 +1,38 @@
+# Mikagami node configuration — node B (listens for node A).
+# Install as /etc/mikagami/mikagami.toml (mode 0600, owner root).
+
+[cluster]
+id = "example-ha"
+
+[node]
+id = "node-b"
+listen = "192.168.100.12:7946"
+
+[peer]
+id = "node-a"
+
+[witness]
+id = "witness-1"
+address = "192.168.100.13:7947"
+
+[vip]
+address = "192.168.100.50/24"
+interface = "eth0"
+
+[service]
+manager = "systemd"
+unit = "nginx.service"
+
+[health]
+command = ["/usr/local/bin/check-nginx"]
+
+[security]
+psk_file = "/etc/mikagami/cluster.psk"
+
+[failover]
+auto = true
+
+# [fencing]
+# backend = "command"
+# fence = ["/usr/local/sbin/fence-peer"]
+# verify = ["/usr/local/sbin/verify-peer-fenced"]

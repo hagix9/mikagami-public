@@ -1,0 +1,25 @@
+[Unit]
+Description=Mikagami HA daemon
+After=network-online.target
+Wants=network-online.target
+# The managed service (nginx.service in the examples) must NOT be enabled at
+# boot and must not be started by anything except Mikagami: Mikagami proves
+# the node holds no resource before it ever asks to become Active.
+# Do not let a restart loop hammer the Witness or the peer.
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/mikagami daemon run --config /etc/mikagami/mikagami.toml --arping /usr/sbin/arping
+# The daemon stops itself (non-zero) when it cannot continue safely, for
+# example when the Witness connection is lost while it is a clean Standby;
+# it reconciles anything still owed at the next start.
+Restart=always
+RestartSec=5
+# A graceful stop demotes an Active node first (releases the lease).
+KillSignal=SIGTERM
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

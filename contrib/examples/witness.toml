@@ -1,0 +1,22 @@
+# Mikagami Witness configuration (a third host; never one of the two nodes).
+# Install as /etc/mikagami/witness.toml (mode 0600, owner root).
+#
+# First start:   mikagami witness init --config /etc/mikagami/witness.toml
+# Normal run:    mikagami witness run  --config /etc/mikagami/witness.toml
+#
+# `init` creates the state once and refuses to run over an existing one, so
+# the term can never be silently reset. Never restore the state directory
+# from a backup while the cluster is running: a rolled-back Witness cannot
+# detect it.
+
+cluster = "example-ha"
+id = "witness-1"
+listen = "192.168.100.13:7947"
+nodes = ["node-a", "node-b"]
+preferred = "node-a"
+psk_file = "/etc/mikagami/cluster.psk"
+state_dir = "/var/lib/mikagami-witness"
+
+# After a host reboot an active lease is re-armed automatically ("rearm").
+# "refuse" keeps the Witness NotReady until `mikagami witness rearm` is run.
+on_reboot = "rearm"

@@ -1,0 +1,70 @@
+# Mikagami two-node (witness-less) shared configuration: the SAME file on both nodes.
+# Install as /etc/mikagami/mikagami.toml (mode 0600, owner root) on node-a and node-b, then
+# register each host once:
+#   node-a:  mikagami node register --config /etc/mikagami/mikagami.toml --node-id node-a
+#   node-b:  mikagami node register --config /etc/mikagami/mikagami.toml --node-id node-b
+# The registration is written to /etc/mikagami/node-id (never copy it to the other node).
+# The PSK stays in its own file (security.psk_file) and the HA state in /var/lib/mikagami.
+# Both nodes compare a summary of this file when they connect; a peer with a different
+# file is not admitted (and is not taken for lost). See docs/configuration.md.
+
+[cluster]
+id = "example-2n"
+topology = "two-node"
+
+# One table per node. Exactly one node sets preferred = true (it asks first at a cold start;
+# it never takes the service back from the other node).
+[nodes.node-a]
+preferred = true
+# How to fence node-a (used by node-b). fence stops node-a's OS at a power, hypervisor or
+# cloud control plane; verify prints `isolated` only after observing that stop.
+[nodes.node-a.fencing]
+fence = ["/usr/local/sbin/fence-node", "node-a"]
+verify = ["/usr/local/sbin/verify-node-fenced", "node-a"]
+
+[nodes.node-b]
+# vip_interface = "eth0"   # only when this node's VIP NIC has another name
+[nodes.node-b.fencing]
+fence = ["/usr/local/sbin/fence-node", "node-b"]
+verify = ["/usr/local/sbin/verify-node-fenced", "node-b"]
+
+[two_node]
+fencing_device = "independent"
+fencing_path = "separate"
+
+# Peer links (1 to 4). The node whose id sorts lower dials the other's address:port.
+[[two_node.link]]
+segment = "ha-net"
+role = "ha"
+port = 7946
+address = { node-a = "10.0.1.11", node-b = "10.0.1.12" }
+interface = { node-a = "eth1", node-b = "eth1" }
+
+[[two_node.link]]
+segment = "service-net"
+role = "service"
+port = 7946
+address = { node-a = "192.168.100.11", node-b = "192.168.100.12" }
+interface = { node-a = "eth0", node-b = "eth0" }
+
+[vip]
+address = "192.168.100.50/24"
+interface = "eth0"
+
+[service]
+manager = "systemd"
+unit = "nginx.service"
+
+[health]
+command = ["/usr/local/bin/check-nginx"]
+
+[security]
+psk_file = "/etc/mikagami/cluster.psk"
+
+[failover]
+auto = true
+cycle_timeout_sec = 180
+
+[fencing]
+backend = "command"
+verify_polls = 60

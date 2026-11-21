@@ -1,0 +1,37 @@
+# Mikagami two-node, single segment WITHOUT an independent fence device — node A.
+# Supported, with a restriction: a cooperative start or a planned handover (both nodes
+# connected) is automatic; a peer loss is never taken over automatically. Manual
+# failover: confirm the peer's OS is stopped, then
+#   mikagami two-node takeover --config /etc/mikagami/mikagami.toml --attest-peer-stopped node-b
+# and send SIGUSR1 to the daemon.
+
+[cluster]
+id = "example-2n-single"
+topology = "two-node"
+
+[node]
+id = "node-a"
+preferred = true
+
+[peer]
+id = "node-b"
+
+[[two_node.link]]
+segment = "lan"
+role = "combined"
+interface = "eth0"
+peer_address = "192.168.100.12:7946"
+
+[vip]
+address = "192.168.100.50/24"
+interface = "eth0"
+
+[service]
+manager = "systemd"
+unit = "nginx.service"
+
+[health]
+command = ["/usr/local/bin/check-nginx"]
+
+[security]
+psk_file = "/etc/mikagami/cluster.psk"

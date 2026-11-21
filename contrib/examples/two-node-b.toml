@@ -1,0 +1,54 @@
+# Mikagami two-node (witness-less) configuration — node B (listens on every link).
+# See two-node-a.toml for the comments.
+
+[cluster]
+id = "example-2n"
+topology = "two-node"
+
+[node]
+id = "node-b"
+
+[peer]
+id = "node-a"
+
+[two_node]
+fencing_device = "independent"
+fencing_path = "separate"
+
+[[two_node.link]]
+segment = "ha-net"
+role = "ha"
+interface = "eth1"
+listen = "10.0.1.12:7946"
+
+[[two_node.link]]
+segment = "service-net"
+role = "service"
+interface = "eth0"
+listen = "192.168.100.12:7946"
+
+[vip]
+address = "192.168.100.50/24"
+interface = "eth0"
+
+[service]
+manager = "systemd"
+unit = "nginx.service"
+
+[health]
+command = ["/usr/local/bin/check-nginx"]
+
+[security]
+psk_file = "/etc/mikagami/cluster.psk"
+
+[failover]
+auto = true
+# The fence cycle must outlast fence_timeout_sec + the verification window
+# (verify_polls x 2 s): 30 + 120 s here.
+cycle_timeout_sec = 180
+
+[fencing]
+backend = "command"
+fence = ["/usr/local/sbin/fence-peer"]
+verify = ["/usr/local/sbin/verify-peer-fenced"]
+verify_polls = 60

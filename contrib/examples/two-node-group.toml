@@ -1,0 +1,80 @@
+# Mikagami two-node shared configuration with a resource group: the same file on both
+# nodes (register each node once, see two-node-shared.toml). The group replaces [service]:
+# the resources start in this order (each confirmed running), then [health] must pass, then
+# the VIP is announced (gratuitous ARP); they stop in reverse order. Exactly one resource is
+# of type "vip" (the [vip] address, added at that position).
+
+[cluster]
+id = "example-2n-group"
+topology = "two-node"
+
+# One table per node. Exactly one node sets preferred = true (it asks first at a cold start;
+# it never takes the service back from the other node).
+[nodes.node-a]
+preferred = true
+# How to fence node-a (used by node-b). fence stops node-a's OS at a power, hypervisor or
+# cloud control plane; verify prints `isolated` only after observing that stop.
+[nodes.node-a.fencing]
+fence = ["/usr/local/sbin/fence-node", "node-a"]
+verify = ["/usr/local/sbin/verify-node-fenced", "node-a"]
+
+[nodes.node-b]
+# vip_interface = "eth0"   # only when this node's VIP NIC has another name
+[nodes.node-b.fencing]
+fence = ["/usr/local/sbin/fence-node", "node-b"]
+verify = ["/usr/local/sbin/verify-node-fenced", "node-b"]
+
+[two_node]
+fencing_device = "independent"
+fencing_path = "separate"
+
+# Peer links (1 to 4). The node whose id sorts lower dials the other's address:port.
+[[two_node.link]]
+segment = "ha-net"
+role = "ha"
+port = 7946
+address = { node-a = "10.0.1.11", node-b = "10.0.1.12" }
+interface = { node-a = "eth1", node-b = "eth1" }
+
+[[two_node.link]]
+segment = "service-net"
+role = "service"
+port = 7946
+address = { node-a = "192.168.100.11", node-b = "192.168.100.12" }
+interface = { node-a = "eth0", node-b = "eth0" }
+
+[vip]
+address = "192.168.100.50/24"
+interface = "eth0"
+
+[[group.resource]]
+name = "db"
+type = "systemd"
+unit = "postgresql.service"
+
+[[group.resource]]
+name = "app"
+type = "command"
+start = ["/usr/local/sbin/app-start"]
+stop = ["/usr/local/sbin/app-stop"]
+# Prints exactly `running` or `stopped` (anything else is "unknown").
+status = ["/usr/local/sbin/app-status"]
+start_timeout_sec = 60
+
+[[group.resource]]
+name = "vip"
+type = "vip"
+
+[health]
+command = ["/usr/local/bin/check-app"]
+
+[security]
+psk_file = "/etc/mikagami/cluster.psk"
+
+[failover]
+auto = true
+cycle_timeout_sec = 180
+
+[fencing]
+backend = "command"
+verify_polls = 60

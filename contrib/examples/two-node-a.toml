@@ -1,0 +1,63 @@
+# Mikagami two-node (witness-less) configuration — node A (recommended layout: two
+# segments, service + HA, and an independent fence device). Install as
+# /etc/mikagami/mikagami.toml (mode 0600, owner root). See TWO_NODE_ARCHITECTURE.md.
+#
+# The node whose id sorts LOWER dials the peer on every link (`peer_address`); the
+# node whose id sorts HIGHER listens (`listen`). Exactly one node sets preferred.
+
+[cluster]
+id = "example-2n"
+topology = "two-node"
+
+[node]
+id = "node-a"
+preferred = true
+
+[peer]
+id = "node-b"
+
+[two_node]
+# "independent": fence acts on a power / hypervisor / cloud control plane outside the
+# peer's OS and stops the OS; verify prints `isolated` only after observing that stop.
+fencing_device = "independent"
+# "separate": the fence control path does not use a peer-link segment.
+fencing_path = "separate"
+
+[[two_node.link]]
+segment = "ha-net"
+role = "ha"
+interface = "eth1"
+peer_address = "10.0.1.12:7946"
+
+[[two_node.link]]
+segment = "service-net"
+role = "service"
+interface = "eth0"
+peer_address = "192.168.100.12:7946"
+
+[vip]
+address = "192.168.100.50/24"
+interface = "eth0"
+
+[service]
+manager = "systemd"
+unit = "nginx.service"
+
+[health]
+command = ["/usr/local/bin/check-nginx"]
+
+[security]
+psk_file = "/etc/mikagami/cluster.psk"
+
+[failover]
+auto = true
+# The fence cycle must outlast fence_timeout_sec + the verification window
+# (verify_polls x 2 s): 30 + 120 s here.
+cycle_timeout_sec = 180
+
+[fencing]
+backend = "command"
+fence = ["/usr/local/sbin/fence-peer"]
+verify = ["/usr/local/sbin/verify-peer-fenced"]
+# A graceful OS shutdown can outlast the default window (10 polls, one every 2 s).
+verify_polls = 60

@@ -1,0 +1,51 @@
+[package]
+name = "mikagami"
+version = "0.8.0"
+edition = "2024"
+description = "A lightweight Linux HA service manager (two-node and Witness topologies)"
+license = "Apache-2.0"
+# Never published to a registry.
+publish = false
+
+[dependencies]
+cbor2 = "1.1.4"
+clap = { version = "4.5", features = ["derive"] }
+getrandom = "0.3"
+libc = "0.2"
+hmac = "0.12"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+toml = "0.9"
+
+# Phase 1-J24 TEST-ONLY: the fault injection of src/j24_fault_injection.rs. Never a default
+# feature; the production build does not compile it.
+[features]
+j24-fault-injection = []
+# Phase 1-J25 candidate: the GCE fencing helper binary `mikagami-gce-fence` (src/bin). Never a
+# default feature; `cargo build --release --locked --bin mikagami` and the default build do not
+# build it.
+j25-gce-fence = []
+# Phase 1-J25 TEST-ONLY: the crash points of the daemon (with the J24 fault file) and of the helper.
+j25-fault-injection = ["j24-fault-injection"]
+
+[[bin]]
+name = "mikagami-gce-fence"
+path = "src/bin/mikagami-gce-fence.rs"
+required-features = ["j25-gce-fence"]
+
+[target.'cfg(target_os = "linux")'.dependencies]
+netlink-packet-core = "0.9"
+netlink-packet-route = "0.33"
+netlink-sys = "0.9"
+
+# Phase 1-J12 prototype only: TLS for the unwired operation-journal network CAS
+# (src/gce_operation_journal.rs, compiled only through
+# tests/gce_operation_journal.rs). Kept out of [dependencies] so the mikagami
+# binary does not link any of it. Minimum versions carry the RustSec fixes
+# recorded in prototype/v0.7/phase1-journal/j12/DEPENDENCY_AUDIT.md.
+[dev-dependencies]
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std"] }
+rustls-pki-types = { version = "1.15.1", features = ["std"] }
+rustls-webpki = { version = "0.103.16", default-features = false, features = ["std"] }
+rcgen = { version = "0.14.10", default-features = false, features = ["crypto", "ring", "pem"] }

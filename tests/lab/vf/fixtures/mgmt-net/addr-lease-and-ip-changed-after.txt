@@ -1,0 +1,2 @@
+2: ens4    inet 10.146.0.23/32 metric 100 scope global dynamic ens4\       valid_lft 2920sec preferred_lft 2920sec
+2: ens4    inet6 fe80::4001:aff:fe92:15/64 scope link \       valid_lft forever preferred_lft forever
